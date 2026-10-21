@@ -1,0 +1,238 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Graph Based Search Engine</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: linear-gradient(135deg, #10172a, #172554, #312e81);
+  color: #f8fafc;
+  min-height: 100vh;
+}
+header { text-align: center; padding: 35px 15px 20px; }
+header h1 { color: #67e8f9; margin-bottom: 10px; }
+header p { color: #cbd5e1; }
+main {
+  width: min(1050px, 94%);
+  margin: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  padding-bottom: 30px;
+}
+section {
+  background: rgba(15, 23, 42, 0.92);
+  padding: 22px;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  box-shadow: 0 8px 25px #02061755;
+}
+h2 { color: #a5b4fc; font-size: 20px; }
+input {
+  width: 100%;
+  padding: 12px;
+  margin: 7px 0;
+  border: 1px solid #475569;
+  border-radius: 9px;
+  background: #1e293b;
+  color: white;
+  font-size: 15px;
+}
+button {
+  border: 0;
+  border-radius: 9px;
+  padding: 11px 15px;
+  margin-top: 8px;
+  background: #6366f1;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+button:hover { background: #4f46e5; }
+.full { width: 100%; }
+#message { color: #67e8f9; min-height: 24px; }
+.result, .node {
+  padding: 12px;
+  background: #1e293b;
+  border-radius: 9px;
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+small { color: #cbd5e1; }
+footer { text-align: center; color: #cbd5e1; padding: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🔎 Graph Based Search Engine</h1>
+  <p>Explore connected information using Graph Data Structures and BFS</p>
+</header>
+
+<main>
+  <section>
+    <h2>➕ Add Node</h2>
+    <input id="nodeId" placeholder="Enter Node ID (e.g. N1)">
+    <input id="description" placeholder="Enter node description">
+    <button class="full" onclick="addNode()">Add Node</button>
+    <h2>📚 Existing Nodes</h2>
+    <div id="nodes">No nodes added yet.</div>
+  </section>
+
+  <section>
+    <h2>🔗 Create Connection</h2>
+    <input id="source" placeholder="Source Node ID">
+    <input id="destination" placeholder="Destination Node ID">
+    <button class="full" onclick="addLink()">Add Link</button>
+
+    <h2>🕸️ Graph Connections</h2>
+    <div id="links">No connections added yet.</div>
+  </section>
+
+  <section>
+    <h2>🔍 Search Information</h2>
+    <input id="query" placeholder="Enter a keyword to search">
+    <button class="full" onclick="searchGraph()">Search with BFS</button>
+    <p id="message" role="status"></p>
+    <div id="results">Your search results will appear here.</div>
+  </section>
+</main>
+
+<footer>Graph Based Search Engine | Python Project Web Demo | DSA & BFS</footer>
+
+<script>
+const graph = new Map();
+const descriptions = new Map();
+const connections = [];
+
+function addNode() {
+  const id = document.getElementById("nodeId").value.trim();
+  const description = document.getElementById("description").value.trim();
+
+  if (!id || !description) {
+    alert("Please enter both Node ID and description.");
+    return;
+  }
+  if (graph.has(id)) {
+    alert("This Node ID already exists.");
+    return;
+  }
+
+  graph.set(id, []);
+  descriptions.set(id, description);
+
+  document.getElementById("nodeId").value = "";
+  document.getElementById("description").value = "";
+  renderNodes();
+}
+
+function addLink() {
+  const source = document.getElementById("source").value.trim();
+  const destination = document.getElementById("destination").value.trim();
+
+  if (!graph.has(source) || !graph.has(destination)) {
+    alert("Add both nodes before connecting them.");
+    return;
+  }
+  if (source === destination) {
+    alert("Choose two different nodes.");
+    return;
+  }
+  if (graph.get(source).includes(destination)) {
+    alert("This connection already exists.");
+    return;
+  }
+
+  // Undirected connection: both nodes can reach each other.
+  graph.get(source).push(destination);
+  graph.get(destination).push(source);
+  connections.push([source, destination]);
+
+  document.getElementById("source").value = "";
+  document.getElementById("destination").value = "";
+  renderLinks();
+}
+
+function searchGraph() {
+  const query = document.getElementById("query").value.trim().toLowerCase();
+  const results = document.getElementById("results");
+  const message = document.getElementById("message");
+
+  if (!query) {
+    message.textContent = "Please enter a search keyword.";
+    results.innerHTML = "";
+    return;
+  }
+
+  const visited = new Set();
+  const queue = [];
+  const matches = [];
+
+  // Start BFS from each unvisited node so disconnected
+  // parts of the graph are also searched.
+  for (const start of graph.keys()) {
+    if (visited.has(start)) continue;
+
+    queue.push(start);
+    visited.add(start);
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      const description = descriptions.get(current);
+
+      if (description.toLowerCase().includes(query) ||
+          current.toLowerCase().includes(query)) {
+        matches.push({ id: current, description });
+      }
+
+      for (const neighbor of graph.get(current)) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          queue.push(neighbor);
+        }
+      }
+    }
+  }
+
+  message.textContent = `Visited ${visited.size} node(s). Found ${matches.length} match(es).`;
+
+  if (matches.length === 0) {
+    results.innerHTML = '<p>No matching information found.</p>';
+    return;
+  }
+
+  results.innerHTML = matches.map(item =>
+    `<div class="result"><strong>${escapeHTML(item.id)}</strong>
+    <p>${escapeHTML(item.description)}</p></div>`
+  ).join("");
+}
+
+function escapeHTML(value) {
+  return value.replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;",
+    '"': "&quot;", "'": "&#39;"
+  })[char]);
+}
+
+function renderNodes() {
+  const container = document.getElementById("nodes");
+  container.innerHTML = [...descriptions.entries()].map(([id, description]) =>
+    `<div class="node"><strong>${escapeHTML(id)}</strong><br>
+    <small>${escapeHTML(description)}</small></div>`
+  ).join("");
+}
+
+function renderLinks() {
+  const container = document.getElementById("links");
+  container.innerHTML = connections.map(([source, destination]) =>
+    `<div class="node">${escapeHTML(source)} ↔
+    ${escapeHTML(destination)}</div>`
+  ).join("");
+}
+</script>
+</body>
+</html>
